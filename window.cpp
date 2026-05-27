@@ -96,13 +96,14 @@ void Window::rebuild_approx2()
     build_piecewise_cubic(n, m_nodes, m_fvals, m_coeffs);
 }
 
-void Window::paintEvent(QPaintEvent * /* event */)
+void Window::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
 
     double x1, x2, y1, y2;
     double max_y, min_y;
     double delta_x = (b - a) / n;
+    double maxErr = 0.0;
 
     max_y = min_y = 0;
     for (x1 = a; x1 - b < 1.e-6; x1 += delta_x) {
@@ -169,10 +170,22 @@ void Window::paintEvent(QPaintEvent * /* event */)
 
     painter.restore();
 
+    if (m_coeffs) {
+	int steps = 1000;
+        for (int i = 0; i <= 1000; i++) {
+	    double x = a + i * (b - a) / steps;
+	    double err = fabs(func(func_id, x) - eval_piecewise_cubic(n, m_nodes, m_coeffs, x));
+	    if (err > maxErr) {
+		maxErr = err;
+	    }
+	}
+    }
+
     painter.setPen("blue");
     painter.drawText(0, 20, f_name);
     painter.drawText(0, 40, QString("n=%1  max|F|=%2")
                      .arg(n).arg(maxF, 0, 'e', 4));
+    painter.drawText(0, 60, QString("oshibka=%1").arg(maxErr, 0, 'e', 4));
 }
 
 
