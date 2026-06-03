@@ -52,7 +52,7 @@ static void newton_to_power(const double *z, const double *dd,
     (void)poly;
 }
 
-void build_piecewise_cubic(int n,
+void build_piecewise_cubic_m1(int n,
                            const double *x,
                            const double *f,
                            double *a)
@@ -87,7 +87,7 @@ void build_piecewise_cubic(int n,
     }
 }
 
-double eval_piecewise_cubic(int n,
+double eval_piecewise_cubic_m1(int n,
                             const double *x,
                             const double *a,
                             double xval)
