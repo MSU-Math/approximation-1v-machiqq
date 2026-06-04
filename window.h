@@ -2,14 +2,14 @@
 #define WINDOW_H
 #include <QWidget>
 #include <QString>
-#include "approx2.h"
+#include "method33.h"
+#include "method43.h"
 
 class Window : public QWidget
 {
     Q_OBJECT
   private:
     int func_id;
-    const char *f_name;
     double a;
     double b;
     int n;

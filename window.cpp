@@ -6,7 +6,8 @@
 #include <math.h>
 #include "window.h"
 #include "functions.h"
-#include "approx2.h"
+#include "method33.h"
+#include "method43.h"
 
 #define DEFAULT_A -10
 #define DEFAULT_B  10
@@ -147,7 +148,7 @@ void Window::rebuild()
     double center = 0.5 * (a + b);
     double half = 0.5 * (b - a) / pow(2.0, scale_exp);
     double ca = center - half;
-    double cb = center + half
+    double cb = center + half;
 
     for (int i = 0; i < n; i++) {
         m_nodes[i] = ca + i * (cb - ca) / (n - 1);
@@ -165,7 +166,7 @@ void Window::rebuild()
         m_fvals[i] = fv;
     }
     if (n >= 4) {
-        build_piecewise_cubic(n, m_nodes, m_fvals, m_coeffs1);
+        build_piecewise_cubic_m1(n, m_nodes, m_fvals, m_coeffs1);
 	build_piecewise_cubic(n, m_nodes, m_fvals, m_coeffs2);
     }
 }
@@ -178,7 +179,7 @@ static void compute_range(int func_id, const double *nodes, int n, const double 
 
     int steps = 4 * n;
     double ca = nodes[0];
-    double cd = nodes[n-1];
+    double cb = nodes[n-1];
 
     for (int i = 0; i <= steps; i++) {
 	double x = ca + i * (cb - ca) / steps;
@@ -297,7 +298,7 @@ void Window::paintEvent(QPaintEvent *)
 	    double x1 = ca;
 	    double y1 = eval_piecewise_cubic_m1(n, m_nodes, m_coeffs1, x1);
 	    for (int i = 1; i <= steps; i++) {
-	        double x2 = ca + i * steps;
+	        double x2 = ca + i * step;
 	        double y2 = eval_piecewise_cubic_m1(n, m_nodes, m_coeffs1, x2);
 	        painter.drawLine(QPointF(x1, y1), QPointF(x2, y2));
 	        x1 = x2;
@@ -311,7 +312,7 @@ void Window::paintEvent(QPaintEvent *)
 	    double x1 = ca;
 	    double y1 = eval_piecewise_cubic(n, m_nodes, m_coeffs2, x1);
 	    for (int i = 1; i <= steps; i++) {
-	        double x2 = ca + i * steps;
+	        double x2 = ca + i * step;
 	        double y2 = eval_piecewise_cubic(n, m_nodes, m_coeffs2, x2);
 	        painter.drawLine(QPointF(x1, y1), QPointF(x2, y2));
 	        x1 = x2;
@@ -326,7 +327,7 @@ void Window::paintEvent(QPaintEvent *)
 	    double x1 = ca;
 	    double y1 = fabs(func(func_id, x1) - eval_piecewise_cubic_m1(n, m_nodes, m_coeffs1, x1));
 	    for (int i = 1; i <= steps; i++) {
-	        double x2 = ca + i * steps;
+	        double x2 = ca + i * step;
 	        double y2 = fabs(func(func_id, x2) - eval_piecewise_cubic_m1(n, m_nodes, m_coeffs1, x2));
 	        painter.drawLine(QPointF(x1, y1), QPointF(x2, y2));
 	        x1 = x2;
@@ -336,10 +337,10 @@ void Window::paintEvent(QPaintEvent *)
             QPen pen_e2(Qt::darkGreen);
 	    pen_e2.setWidth(0);
             painter.setPen(pen_e2);
-	    double x1 = ca;
-	    double y1 = fabs(func(func_id, x1) - eval_piecewise_cubic(n, m_nodes, m_coeffs2, x1));
+	    x1 = ca;
+	    y1 = fabs(func(func_id, x1) - eval_piecewise_cubic(n, m_nodes, m_coeffs2, x1));
 	    for (int i = 1; i <= steps; i++) {
-	        double x2 = ca + i * steps;
+	        double x2 = ca + i * step;
 	        double y2 = fabs(func(func_id, x2) - eval_piecewise_cubic(n, m_nodes, m_coeffs2, x2));
 	        painter.drawLine(QPointF(x1, y1), QPointF(x2, y2));
 	        x1 = x2;
@@ -348,7 +349,7 @@ void Window::paintEvent(QPaintEvent *)
         }
     }
     QPen pen_axis(Qt::black);
-    pen_axis.setWidht(0);
+    pen_axis.setWidth(0);
     painter.setPen(pen_axis);
     painter.drawLine(QPointF(ca,0), QPointF(cb, 0));
     painter.drawLine(QPointF(0, min_y), QPointF(0, max_y));
