@@ -1,50 +1,59 @@
 #ifndef WINDOW_H
 #define WINDOW_H
+
 #include <QWidget>
 #include <QString>
-#include "method33.h"
-#include "method43.h"
 
 class Window : public QWidget
 {
     Q_OBJECT
-  private:
-    int func_id;
-    double a;
-    double b;
-    int n;
-    void (*f)(void);
-    int view_mode;
-    int scale_exp;
-    int perturb;
-    QString f_name;
 
-    double *m_nodes;
-    double *m_fvals;
-    double *m_coeffs1;
-    double *m_coeffs2;
-    void rebuild();
-
-  public:
-    Window(QWidget *parent = nullptr);
+public:
+    explicit Window(QWidget *parent = 0);
     ~Window();
-    QSize minimumSizeHint() const;
-    QSize sizeHint() const;
+
     int parse_command_line(int argc, char *argv[]);
-  public slots:
+
+public slots:
     void change_func();
-    void change_view();
-    void zoom_in();
-    void zoom_out();
-    void increase_n();
-    void decrease_n();
-    void increase_perturb();
-    void decrease_perturb();
 
-  protected:
-    void paintEvent(QPaintEvent *event);
-    void keyPressEvent(QKeyEvent *);
+protected:
+    void paintEvent(QPaintEvent *event) Q_DECL_OVERRIDE;
+    void keyPressEvent(QKeyEvent *event) Q_DECL_OVERRIDE;
+    void resizeEvent(QResizeEvent *event) Q_DECL_OVERRIDE;
 
+private:
+    double  m_a;
+    double  m_b;
+    int     m_n;
+    int     m_k;
 
+    int     m_view_mode;
+    int     m_scale_s;
+    int     m_perturb_p;
+
+    double *m_x;
+    double *m_f;
+    double *m_a33;
+    double *m_a43;
+    double *m_work33;
+    double *m_work43;
+
+    int     m_alloc_n;
+
+    void rebuild();
+    void free_arrays();
+    void alloc_arrays(int n);
+
+    void draw_graph(QPainter &painter);
+
+    void get_xrange(double &xa, double &xb) const;
+
+    double fval(double x) const;
+
+    double max_abs_f() const;
+
+    QString status_string() const;
 };
+
 #endif

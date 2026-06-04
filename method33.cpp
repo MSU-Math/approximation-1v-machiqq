@@ -1,125 +1,93 @@
 #include "method33.h"
-#include <stdlib.h>
-#include <string.h>
+#include <math.h>
+#include <stddef.h>
 
-static void divided_diff4(const double *z, const double *v, double *dd)
+static double divdiff(double xi, double fi, double xi1, double fi1)
 {
-    double d[4];
-    int i, j;
-    for (i = 0; i < 4; i++) d[i] = v[i];
-    dd[0] = d[0];
-    for (j = 1; j < 4; j++) {
-        for (i = 3; i >= j; i--) {
-            d[i] = (d[i] - d[i-1]) / (z[i] - z[i-j]);
-        }
-        dd[j] = d[j];
-    }
+    return (fi1 - fi) / (xi1 - xi);
 }
 
-static void newton_to_power(const double *z, const double *dd,
-                            double shift, double *out)
-{
-    double poly[4] = {dd[3], 0.0, 0.0, 0.0};
-    double alpha;
-    int j, k;
-    double a1;
-    double a2;
-
-    alpha = shift - z[2];
-    for (k = 3; k >= 1; k--)
-        poly[k] = poly[k-1] + alpha * poly[k];
-    poly[0] = alpha * poly[0];
-    {
-        double tmp[4] = {dd[3], 0.0, 0.0, 0.0};
-        double a0 = shift - z[2];
-        for (k = 3; k >= 1; k--)
-            tmp[k] = tmp[k-1] + a0 * tmp[k];
-        tmp[0] = a0 * tmp[0];
-        tmp[0] += dd[2];
-        a1 = shift - z[1];
-        for (k = 3; k >= 1; k--)
-            tmp[k] = tmp[k-1] + a1 * tmp[k];
-        tmp[0] = a1 * tmp[0];
-        tmp[0] += dd[1];
-        a2 = shift - z[0];
-        for (k = 3; k >= 1; k--)
-            tmp[k] = tmp[k-1] + a2 * tmp[k];
-        tmp[0] = a2 * tmp[0];
-        tmp[0] += dd[0];
-
-        for (j = 0; j < 4; j++) out[j] = tmp[j];
-    }
-    (void)poly;
-}
-
-void build_piecewise_cubic_m1(int n,
-                           const double *x,
-                           const double *f,
-                           double *a)
+void method33_build(int n, const double *x, const double *f,
+                    double *a, double *work)
 {
     int i;
-    double z[4], v[4], dd[4];
+    double *xe = work;
+    double *fe = work + (n + 2);
 
-    if (n < 4) {
-        memset(a, 0, sizeof(double) * 4 * (n > 1 ? n-1 : 1));
-        return;
+    for (i = 0; i < n; i++) {
+        xe[i + 1] = x[i];
+        fe[i + 1] = f[i];
+    }
+
+    xe[0] = x[0] - (x[1] - x[0]);
+    fe[0] = f[0] - (f[1] - f[0]) / (x[1] - x[0]) * (x[1] - x[0]);
+    fe[0] = 2.0 * f[0] - f[1];
+
+    xe[n + 1] = x[n - 1] + (x[n - 1] - x[n - 2]);
+    fe[n + 1] = 2.0 * f[n - 1] - f[n - 2];
+
+    double *d = work + 2 * (n + 2);
+
+    double dd_left, dd_right;
+
+    dd_left = divdiff(xe[0], fe[0], xe[1], fe[1]);
+
+    for (i = 0; i < n; i++) {
+        dd_right = divdiff(xe[i + 1], fe[i + 1], xe[i + 2], fe[i + 2]);
+
+        if ((dd_left >= 0.0) == (dd_right >= 0.0) &&
+            !(dd_left == 0.0 && dd_right == 0.0)) {
+            double sign = (dd_left >= 0.0) ? 1.0 : -1.0;
+            double abs_left  = fabs(dd_left);
+            double abs_right = fabs(dd_right);
+            d[i] = sign * (abs_left < abs_right ? abs_left : abs_right);
+        } else {
+            d[i] = 0.0;
+        }
+
+        dd_left = dd_right;
     }
 
     for (i = 0; i < n - 1; i++) {
-        int i0;
-
-        if (i == 0) {
-            i0 = 0;
-        } else if (i == n - 2) {
-            i0 = n - 4;
-        } else {
-            i0 = i - 1;
-        }
-
-        z[0] = x[i0];     v[0] = f[i0];
-        z[1] = x[i0+1];   v[1] = f[i0+1];
-        z[2] = x[i0+2];   v[2] = f[i0+2];
-        z[3] = x[i0+3];   v[3] = f[i0+3];
-
-        divided_diff4(z, v, dd);
-
-        newton_to_power(z, dd, x[i], &a[4*i]);
+        double h = x[i + 1] - x[i];
+        double dd_seg = (f[i + 1] - f[i]) / h;
+        double c0 = f[i];
+        double c1 = d[i];
+        double c2 = (3.0 * dd_seg - 2.0 * d[i] - d[i + 1]) / h;
+        double c3 = (d[i] + d[i + 1] - 2.0 * dd_seg) / (h * h);
+        a[4 * i + 0] = c0;
+        a[4 * i + 1] = c1;
+        a[4 * i + 2] = c2;
+        a[4 * i + 3] = c3;
     }
 }
 
-double eval_piecewise_cubic_m1(int n,
-                            const double *x,
-                            const double *a,
-                            double xval)
+double method33_eval(double t, double a_left, double b_right,
+                     int n, const double *x, const double *a)
 {
-    int i;
-    int lo;
-    int hi;
-    int mid;
-    double t, val;
+    int lo, hi, mid, seg;
+    (void)a_left;
+    (void)b_right;
 
-    if (xval <= x[0]) {
-        i = 0;
-    } else if (xval >= x[n-1]) {
-        i = n - 2;
+    if (n <= 1) return a[0];
+
+    if (t <= x[0]) {
+        seg = 0;
+    } else if (t >= x[n - 1]) {
+        seg = n - 2;
     } else {
         lo = 0;
         hi = n - 2;
-        while (lo < hi - 1) {
+        while (lo < hi) {
             mid = (lo + hi) / 2;
-            if (xval < x[mid]) hi = mid;
-            else               lo = mid;
+            if (x[mid + 1] <= t)
+                lo = mid + 1;
+            else
+                hi = mid;
         }
-        i = lo;
+        seg = lo;
     }
 
-    t = xval - x[i];
-
-    val = a[4*i+3];
-    val = val * t + a[4*i+2];
-    val = val * t + a[4*i+1];
-    val = val * t + a[4*i+0];
-
-    return val;
+    double dt = t - x[seg];
+    return a[4*seg+0] + dt*(a[4*seg+1] + dt*(a[4*seg+2] + dt*a[4*seg+3]));
 }
-

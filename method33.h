@@ -1,13 +1,19 @@
-#ifndef APPROX2_H
-#define APPROX2_H
+#ifndef METHOD33_H
+#define METHOD33_H
 
-void build_piecewise_cubic_m1(int n,
-                           const double *nodes,
-                           const double *fvals,
-                           double *coeffs);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-double eval_piecewise_cubic_m1(int n,
-                            const double *nodes,
-                            const double *coeffs,
-                            double x);
+void method33_build(int n, const double *x, const double *f,
+                    double *a, double *work);
+
+
+double method33_eval(double t, double a_left, double b_right,
+                     int n, const double *x, const double *a);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif
