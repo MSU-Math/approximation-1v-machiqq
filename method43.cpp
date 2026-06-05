@@ -68,7 +68,7 @@ double method43_eval(double t, double a_left, double b_right,
     (void)b_right;
 
     if (n <= 1) return a[0];
-
+    
     if (t <= x[0]) {
         seg = 0;
     } else if (t >= x[n - 1]) {
