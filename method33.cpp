@@ -13,6 +13,7 @@ void method33_build(int n, const double *x, const double *f,
     int i;
     double *xe = work;
     double *fe = work + (n + 2);
+    double psi = 1e-15;
 
     for (i = 0; i < n; i++) {
         xe[i + 1] = x[i];
@@ -36,7 +37,7 @@ void method33_build(int n, const double *x, const double *f,
         dd_right = divdiff(xe[i + 1], fe[i + 1], xe[i + 2], fe[i + 2]);
 
         if ((dd_left >= 0.0) == (dd_right >= 0.0) &&
-            !(dd_left == 0.0 && dd_right == 0.0)) {
+            !(dd_left < psi && dd_right < psi)) {
             double sign = (dd_left >= 0.0) ? 1.0 : -1.0;
             double abs_left  = fabs(dd_left);
             double abs_right = fabs(dd_right);
