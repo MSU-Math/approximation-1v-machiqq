@@ -125,11 +125,15 @@ double Window::fval(double x) const
 void Window::rebuild()
 {
     int n = m_n;
+    double xa;
+    double xb;
+    get_xrange(xa, xb);
+
     alloc_arrays(n);
     if (!m_x || !m_f) return;
 
     for (int i = 0; i < n; i++) {
-        m_x[i] = m_a + (m_b - m_a) * i / (double)(n - 1);
+        m_x[i] = xa + (xb - xa) * i / (double)(n - 1);
         m_f[i] = func(m_k, m_x[i]);
     }
 
@@ -396,10 +400,12 @@ void Window::keyPressEvent(QKeyEvent *event)
 
     case Qt::Key_2:
         m_scale_s++;
+	rebuild();
         break;
 
     case Qt::Key_3:
         m_scale_s--;
+	rebuild();
         break;
 
     case Qt::Key_4:
