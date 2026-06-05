@@ -130,6 +130,7 @@ void Window::rebuild()
     get_xrange(xa, xb);
 
     alloc_arrays(n);
+    get_xrange(xa, xb);
     if (!m_x || !m_f) return;
 
     for (int i = 0; i < n; i++) {
@@ -401,7 +402,7 @@ void Window::keyPressEvent(QKeyEvent *event)
     case Qt::Key_2:
         m_scale_s++;
 	rebuild();
-        break;
+	break;
 
     case Qt::Key_3:
         m_scale_s--;
