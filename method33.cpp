@@ -1,94 +1,118 @@
 #include "method33.h"
-#include <math.h>
-#include <stddef.h>
 
-static double divdiff(double xi, double fi, double xi1, double fi1)
+#include <cmath>
+#include <cstdlib>
+
+static inline int A_IDX(int i, int comp)
 {
-    return (fi1 - fi) / (xi1 - xi);
+    return 4 * i + comp;
 }
 
 void method33_build(int n, const double *x, const double *f,
-                    double *a, double *work)
+                     double *a, double *d_workspace)
 {
-    int i;
-    double *xe = work;
-    double *fe = work + (n + 2);
-    double psi = 1e-15;
-
-    for (i = 0; i < n; i++) {
-        xe[i + 1] = x[i];
-        fe[i + 1] = f[i];
+    if (n < 3) {
+        return;
     }
 
-    xe[0] = x[0] - (x[1] - x[0]);
-    fe[0] = f[0] - (f[1] - f[0]) / (x[1] - x[0]) * (x[1] - x[0]);
-    fe[0] = 2.0 * f[0] - f[1];
+    double *X = (double *)malloc(sizeof(double) * (size_t)(n + 2));
+    double *F = (double *)malloc(sizeof(double) * (size_t)(n + 2));
+    double *fd = (double *)malloc(sizeof(double) * (size_t)(n + 1));
 
-    xe[n + 1] = x[n - 1] + (x[n - 1] - x[n - 2]);
-    fe[n + 1] = 2.0 * f[n - 1] - f[n - 2];
+    for (int j = 0; j < n; ++j) {
+        X[j + 1] = x[j];
+        F[j + 1] = f[j];
+    }
 
-    double *d = work + 2 * (n + 2);
+    X[0] = x[0] - (x[1] - x[0]);
+    F[0] = 2.0 * f[0] - f[1];
 
-    double dd_left, dd_right;
+    X[n + 1] = x[n - 1] + (x[n - 1] - x[n - 2]);
+    F[n + 1] = 2.0 * f[n - 1] - f[n - 2];
 
-    dd_left = divdiff(xe[0], fe[0], xe[1], fe[1]);
+    for (int j = 0; j <= n; ++j) {
+        fd[j] = (F[j + 1] - F[j]) / (X[j + 1] - X[j]);
+    }
 
-    for (i = 0; i < n; i++) {
-        dd_right = divdiff(xe[i + 1], fe[i + 1], xe[i + 2], fe[i + 2]);
+    double *d = d_workspace;
+    for (int i = 1; i <= n; ++i) {
+        double left = fd[i - 1];
+        double right = fd[i];
 
-        if ((dd_left >= 0.0) == (dd_right >= 0.0) &&
-            !(dd_left < psi && dd_right < psi)) {
-            double sign = (dd_left >= 0.0) ? 1.0 : -1.0;
-            double abs_left  = fabs(dd_left);
-            double abs_right = fabs(dd_right);
-            d[i] = sign * (abs_left < abs_right ? abs_left : abs_right);
+        double sign_left = (left > 0.0) - (left < 0.0);
+        double sign_right = (right > 0.0) - (right < 0.0);
+
+        if (sign_left == sign_right && sign_left != 0.0) {
+            double abs_left = std::fabs(left);
+            double abs_right = std::fabs(right);
+            double m = (abs_left < abs_right) ? abs_left : abs_right;
+            d[i - 1] = sign_right * m;
         } else {
-            d[i] = 0.0;
+            d[i - 1] = 0.0;
         }
-
-        dd_left = dd_right;
     }
 
-    for (i = 0; i < n - 1; i++) {
+    for (int i = 0; i < n - 1; ++i) {
         double h = x[i + 1] - x[i];
-        double dd_seg = (f[i + 1] - f[i]) / h;
-        double c0 = f[i];
-        double c1 = d[i];
-        double c2 = (3.0 * dd_seg - 2.0 * d[i] - d[i + 1]) / h;
-        double c3 = (d[i] + d[i + 1] - 2.0 * dd_seg) / (h * h);
-        a[4 * i + 0] = c0;
-        a[4 * i + 1] = c1;
-        a[4 * i + 2] = c2;
-        a[4 * i + 3] = c3;
+        double fdiv = (f[i + 1] - f[i]) / h; /* f[x_i;x_{i+1}] */
+
+        double a1 = f[i];
+        double a2 = d[i];
+        double a3 = (fdiv - d[i]) / h;
+        double a4 = (d[i] + d[i + 1] - 2.0 * fdiv) / (h * h);
+
+        a[A_IDX(i, 0)] = a1;
+        a[A_IDX(i, 1)] = a2;
+        a[A_IDX(i, 2)] = a3;
+        a[A_IDX(i, 3)] = a4;
     }
+
+    free(X);
+    free(F);
+    free(fd);
 }
 
-double method33_eval(double t, double a_left, double b_right,
-                     int n, const double *x, const double *a)
+static int find_piece(double t, int n, const double *x)
 {
-    int lo, hi, mid, seg;
+    if (t <= x[0]) {
+        return 0;
+    }
+    if (t >= x[n - 1]) {
+        return n - 2;
+    }
+
+    int lo = 0;
+    int hi = n - 1;
+    while (hi - lo > 1) {
+        int mid = (lo + hi) / 2;
+        if (x[mid] <= t) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return lo;
+}
+
+double method33_value(double t, double a_left, double b_right,
+                       int n, const double *x, const double *a)
+{
     (void)a_left;
     (void)b_right;
 
-    if (n <= 1) return a[0];
-
-    if (t <= x[0]) {
-        seg = 0;
-    } else if (t >= x[n - 1]) {
-        seg = n - 2;
-    } else {
-        lo = 0;
-        hi = n - 2;
-        while (lo < hi) {
-            mid = (lo + hi) / 2;
-            if (x[mid + 1] <= t)
-                lo = mid + 1;
-            else
-                hi = mid;
-        }
-        seg = lo;
+    if (n < 3) {
+        return 0.0;
     }
 
-    double dt = t - x[seg];
-    return a[4*seg+0] + dt*(a[4*seg+1] + dt*(a[4*seg+2] + dt*a[4*seg+3]));
+    int i = find_piece(t, n, x);
+
+    double a1 = a[A_IDX(i, 0)];
+    double a2 = a[A_IDX(i, 1)];
+    double a3 = a[A_IDX(i, 2)];
+    double a4 = a[A_IDX(i, 3)];
+
+    double dx = t - x[i];
+    double dxn = t - x[i + 1];
+
+    return a1 + a2 * dx + a3 * dx * dx + a4 * dx * dx * dxn;
 }

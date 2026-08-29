@@ -1,17 +1,20 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-double func(int k, double x);
+int f_count(void);
 
-double func_deriv(int k, double x);
+double f_value(int k, double x);
 
-const char* func_name(int k);
+double f_deriv1(int k, double x);
 
-#define FUNC_COUNT 7
+double f_deriv2(int k, double x);
+
+const char *f_name(int k);
 
 #ifdef __cplusplus
 }

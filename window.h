@@ -2,58 +2,54 @@
 #define WINDOW_H
 
 #include <QWidget>
-#include <QString>
+#include <vector>
+
 
 class Window : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit Window(QWidget *parent = 0);
+    explicit Window(QWidget *parent = nullptr);
     ~Window();
-
     int parse_command_line(int argc, char *argv[]);
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
 
 public slots:
     void change_func();
 
-protected:
-    void paintEvent(QPaintEvent *event) Q_DECL_OVERRIDE;
-    void keyPressEvent(QKeyEvent *event) Q_DECL_OVERRIDE;
-    void resizeEvent(QResizeEvent *event) Q_DECL_OVERRIDE;
+public:
+
+    double eval_method1(double t) const;
+    double eval_method2(double t) const;
+    double eval_f(double t) const;
 
 private:
-    double  m_a;
-    double  m_b;
-    int     m_n;
-    int     m_k;
+    double a0, b0;
+    int n0;
+    int k0;
 
-    int     m_view_mode;
-    int     m_scale_s;
-    int     m_perturb_p;
+    int k;
+    long long n;
+    int mode;
+    int s;
+    int p;
 
-    double *m_x;
-    double *m_f;
-    double *m_a33;
-    double *m_a43;
-    double *m_work33;
-    double *m_work43;
+    std::vector<double> x;
+    std::vector<double> fv;
 
-    int     m_alloc_n;
+    std::vector<double> coef33;
+    std::vector<double> work33;
 
-    void rebuild();
-    void free_arrays();
-    void alloc_arrays(int n);
+    std::vector<double> coef43;
+    std::vector<double> work43;
 
-    void draw_graph(QPainter &painter);
+    void rebuild_all();
 
-    void get_xrange(double &xa, double &xb) const;
-
-    double fval(double x) const;
-
-    double max_abs_f() const;
-
-    QString status_string() const;
+    void current_view_range(double *a_view, double *b_view) const;
 };
 
 #endif
