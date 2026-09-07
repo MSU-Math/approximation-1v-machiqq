@@ -3,6 +3,8 @@
 #include <cmath>
 #include <cstdlib>
 
+#define ZETA 1e-10
+
 static inline int A_IDX(int i, int comp)
 {
     return 4 * i + comp;
@@ -42,7 +44,7 @@ void method33_build(int n, const double *x, const double *f,
         double sign_left = (left > 0.0) - (left < 0.0);
         double sign_right = (right > 0.0) - (right < 0.0);
 
-        if (sign_left == sign_right && sign_left != 0.0) {
+        if ((sign_left - sign_right) < ZETA && fabs(sign_left) > ZETA) {
             double abs_left = std::fabs(left);
             double abs_right = std::fabs(right);
             double m = (abs_left < abs_right) ? abs_left : abs_right;
